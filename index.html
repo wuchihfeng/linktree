@@ -14,6 +14,7 @@
             color: #ffffff;
             min-height: 100vh;
         }
+        /* 連結按鈕容器樣式 */
         .link-btn {
             background-color: #1a1008;
             border: 1px solid rgba(249, 115, 22, 0.15);
@@ -28,6 +29,12 @@
         .modal-bg {
             background-color: rgba(0, 0, 0, 0.85);
             backdrop-filter: blur(6px);
+        }
+        /* 調整 SVG 圖示大小以適應按鈕 */
+        .copy-icon {
+            width: 1em;
+            height: 1em;
+            fill: currentColor;
         }
     </style>
 </head>
@@ -55,7 +62,7 @@
 
         <!-- 連結按鈕列表 -->
         <div id="linksContainer" class="w-full flex flex-col gap-3.5">
-            <!-- 動態插入連結 -->
+            <!-- 動態插入連結，結構已調整 -->
         </div>
     </main>
 
@@ -95,23 +102,48 @@
             linksContainer.innerHTML = '';
 
             pageData.links.forEach((link) => {
-                const a = document.createElement('a');
-                a.href = link.url || '#';
-                a.className = 'link-btn w-full py-4 px-5 flex items-center justify-between shadow-lg group relative';
+                // 建立外層容器 (取代原本的 <a>)
+                const container = document.createElement('div');
+                container.className = 'link-btn w-full py-4 px-5 flex items-center justify-between shadow-lg group relative';
                 
+                // 建立中間的連結標題 (點擊標題會導向)
+                const titleLink = document.createElement('a');
                 if (link.url && link.url.startsWith('http')) {
-                    a.target = '_blank';
-                    a.rel = 'noopener noreferrer';
+                    titleLink.href = link.url;
+                    titleLink.target = '_blank';
+                    titleLink.rel = 'noopener noreferrer';
+                } else {
+                    titleLink.href = '#';
                 }
+                titleLink.className = 'font-semibold text-neutral-100 group-hover:text-orange-400 transition text-center flex-grow text-sm sm:text-base';
+                titleLink.textContent = escapeHtml(link.title);
 
-                a.innerHTML = `
-                    <div class="w-6"></div>
-                    <span class="font-semibold text-neutral-100 group-hover:text-orange-400 transition text-center flex-grow text-sm sm:text-base">${escapeHtml(link.title)}</span>
-                    <button class="text-neutral-500 hover:text-orange-400 p-1 text-sm transition w-6 flex justify-end" onclick="event.preventDefault(); showLinkOptions('${escapeHtml(link.url)}')">
-                        <i class="fa-solid fa-ellipsis-vertical"></i>
-                    </button>
+                // 建立右側的複製按鈕 (取代原本的 fa-ellipsis-vertical)
+                // 將 SVG 內嵌進來以方便控制顏色與大小
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'text-neutral-500 hover:text-orange-400 p-1 text-sm transition w-6 flex justify-end items-center';
+                copyBtn.title = '複製連結';
+                // 這是從 image_4.png 提取的複製圖示 SVG
+                copyBtn.innerHTML = `
+                    <svg class="copy-icon" viewBox="0 0 256 256">
+                        <path d="M216,32H88a8,8,0,0,0-8,8V82.34a8,8,0,0,0,16,0V48h112V160H173.66a8,8,0,0,0,0,16H216a8,8,0,0,0,8-8V40A8,8,0,0,0,216,32ZM160,88V216a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V88a8,8,0,0,1,8-8H152A8,8,0,0,1,160,88Zm-16,8H48V200H144Z"/>
+                    </svg>
                 `;
-                linksContainer.appendChild(a);
+
+                // 綁定複製按鈕的點擊事件
+                copyBtn.onclick = (e) => {
+                    e.preventDefault(); // 防止觸發外層的連結跳轉
+                    if (link.url && link.url !== '#') {
+                        copyToClipboard(link.url);
+                    } else {
+                        showToast('此連結未設定網址');
+                    }
+                };
+
+                // 組裝元素
+                container.appendChild(titleLink);
+                container.appendChild(copyBtn);
+                linksContainer.appendChild(container);
             });
         }
 
@@ -120,6 +152,7 @@
             return str.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#039;');
         }
 
+        // 為了保持 API 一致性保留此函數
         window.showLinkOptions = function(url) {
             if (url && url !== '#') {
                 copyToClipboard(url);
